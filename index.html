@@ -968,7 +968,7 @@ let mode = 'focus';
 let totalSecs = 25*60, remaining = totalSecs;
 let running = false, ticker = null;
 let tasks = JSON.parse(localStorage.getItem('ff_tasks')||'[]');
-let activeTaskId = null;
+let activeTaskId = JSON.parse(localStorage.getItem('ff_activeTaskId')||'null');
 let insights = JSON.parse(localStorage.getItem('ff_insights')||'{}');
 let sessions = JSON.parse(localStorage.getItem('ff_sessions')||'[]');
 let coffeeData = JSON.parse(localStorage.getItem('ff_coffee')||'{"allTime":0,"days":{}}');
@@ -990,6 +990,7 @@ function saveData() {
   localStorage.setItem('ff_sessions', JSON.stringify(sessions.slice(-50)));
   localStorage.setItem('ff_coffee', JSON.stringify(coffeeData));
   localStorage.setItem('ff_settings', JSON.stringify(settings));
+  localStorage.setItem('ff_activeTaskId', JSON.stringify(activeTaskId));
 }
 
 function applySettings() {
@@ -1136,7 +1137,7 @@ function onSessionEnd() {
   playChime();
   if (mode==='focus') {
     insights[today].pomos=(insights[today].pomos||0)+1;
-    const t=tasks.find(t=>t.id===activeTaskId);
+    const t=getActiveTask();
     if (t) t.pomos=(t.pomos||0)+1;
     sessions.unshift({type:'focus',task:getActiveTaskName(),date:today,time:new Date().toLocaleTimeString('th',{hour:'2-digit',minute:'2-digit'})});
     const prevTotal = coffeeData.allTime || 0;
@@ -1189,23 +1190,44 @@ function closeCoffeePopup() { document.getElementById('coffeeOverlay').classList
 
 function resetTimer() { running=false; clearInterval(ticker); remaining=totalSecs; document.getElementById('startBtn').textContent='Start'; updateTimerDisplay(); }
 
-function getActiveTaskName() { if(activeTaskId===null)return'Untracked'; const t=tasks.find(t=>t.id===activeTaskId); return t?t.name:'Untracked'; }
+function getActiveTask() {
+  return tasks.find(t => t.id === activeTaskId && !t.done) || null;
+}
+
+function ensureActiveTask() {
+  if (activeTaskId !== null && !getActiveTask()) activeTaskId = null;
+}
+
+function getActiveTaskName() {
+  const t = getActiveTask();
+  return t ? t.name : 'Untracked';
+}
 
 function addTask() {
   const inp=document.getElementById('taskInput'), name=inp.value.trim();
   if(!name) return;
-  tasks.push({id:Date.now(),name,done:false,pomos:0});
-  inp.value=''; saveData(); renderTasks();
+  const task = {id:Date.now(),name,done:false,pomos:0};
+  tasks.push(task);
+  if (activeTaskId === null) activeTaskId = task.id;
+  inp.value=''; saveData(); renderTasks(); renderActiveTaskPill();
 }
 
 function handleTaskKey(e) { if(e.key==='Enter') addTask(); }
 
 function selectTask(id) {
+  if (id !== null && !tasks.some(t => t.id === id && !t.done)) return;
   activeTaskId=activeTaskId===id?null:id;
+  saveData();
   renderTasks();
+  renderActiveTaskPill();
+}
+
+function renderActiveTaskPill() {
+  ensureActiveTask();
   const pill=document.getElementById('activeTaskPill');
-  if(activeTaskId===null){pill.textContent='— no task selected —';pill.className='active-task-pill';}
-  else{const t=tasks.find(t=>t.id===activeTaskId);pill.textContent='▶ '+t.name;pill.className='active-task-pill has-task';}
+  const t = getActiveTask();
+  if(!t){pill.textContent='— no task selected —';pill.className='active-task-pill';}
+  else{pill.textContent='▶ '+t.name;pill.className='active-task-pill has-task';}
 }
 
 function toggleDone(id) {
@@ -1224,6 +1246,7 @@ function deleteTask(id) {
 function clearDone() { tasks=tasks.filter(t=>!t.done); saveData(); renderTasks(); }
 
 function renderTasks() {
+  ensureActiveTask();
   const list=document.getElementById('taskList');
   if(!tasks.length){list.innerHTML='<div class="empty-state">Add tasks to get started</div>';return;}
   list.innerHTML=tasks.map(t=>`
@@ -1558,7 +1581,7 @@ function resetToday() {
 
 
 
-function renderAll() { renderTasks(); renderInsights(); }
+function renderAll() { renderTasks(); renderActiveTaskPill(); renderInsights(); }
 
 function showToast(msg) {
   const t=document.getElementById('toast');
