@@ -1,0 +1,11 @@
+{
+  "name": "focus-flow",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "npx serve .",
+    "deploy:vercel": "vercel --prod",
+    "deploy:firebase": "firebase deploy --only hosting"
+  },
+  "devDependencies": {}
+}
