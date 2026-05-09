@@ -30,6 +30,63 @@
     --font-mono: 'DM Mono', monospace;
   }
 
+  [data-theme="greentea"] {
+    --bg: #f4f7f3;
+    --surface: #ffffff;
+    --surface2: #eaf0e8;
+    --border: rgba(0,0,0,0.07);
+    --border2: rgba(0,0,0,0.12);
+    --text: #141a14;
+    --muted: #82907e;
+    --accent: #3d6b4f;
+    --accent-mid: #4e8264;
+    --accent-dim: rgba(61,107,79,0.09);
+    --accent-glow: rgba(61,107,79,0.20);
+    --green: #2e7d5a;
+    --green-dim: rgba(46,125,90,0.10);
+    --red: #b04040;
+    --red-dim: rgba(176,64,64,0.10);
+  }
+
+  /* Theme toggle button */
+  .theme-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 11px;
+    border-radius: 99px;
+    border: 1px solid var(--border2);
+    background: transparent;
+    cursor: pointer;
+    font-family: var(--font-body);
+    font-size: 12px;
+    color: var(--muted);
+    transition: all 0.18s;
+    white-space: nowrap;
+    line-height: 1;
+    position: relative;
+  }
+  .theme-toggle:hover {
+    background: var(--surface2);
+    color: var(--accent);
+    border-color: var(--accent-glow);
+  }
+  .theme-toggle .theme-icon {
+    font-size: 14px; line-height: 1;
+    transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1), opacity 0.18s;
+  }
+  .theme-toggle:hover .theme-icon { transform: scale(1.2); }
+
+  /* Label swap on hover: hide current, show "Switch to X" */
+  .theme-toggle .theme-label-current { transition: opacity 0.15s; }
+  .theme-toggle .theme-label-hover {
+    display: none;
+    opacity: 0;
+    font-style: italic;
+  }
+  .theme-toggle:hover .theme-label-current { display: none; }
+  .theme-toggle:hover .theme-label-hover { display: inline; opacity: 1; }
+
   body {
     background: var(--bg);
     color: var(--text);
@@ -707,6 +764,11 @@
       <button class="btn sm" onclick="exportData()">Export</button>
       <button class="btn sm" onclick="resetToday()">Reset today</button>
     </div>
+    <button class="theme-toggle" id="themeToggleBtn" onclick="toggleTheme()" title="Switch theme">
+      <span class="theme-icon" id="themeToggleIcon">☕</span>
+      <span class="theme-label-current" id="themeToggleLabel">Coffee</span>
+      <span class="theme-label-hover" id="themeToggleHover">Switch to Green Tea</span>
+    </button>
     <div class="coffee-bar">
       <div class="coffee-cups" id="headerCups"></div>
       <div class="coffee-label" id="headerCoffeeLabel">0 ☕</div>
@@ -917,7 +979,7 @@
     <div class="unlock-title" id="unlockTitle">Americano <em>unlocked</em></div>
     <div class="unlock-desc" id="unlockDesc">A bold shot of espresso, diluted with hot water.</div>
     <div class="unlock-flavour" id="unlockFlavour">"Strong, clean, no distractions."</div>
-    <button class="unlock-close" onclick="closeUnlockPopup()">Nice, keep brewing ☕</button>
+    <button class="unlock-close" id="unlockCloseBtn" onclick="closeUnlockPopup()">Nice, keep brewing ☕</button>
   </div>
 </div>
 
@@ -925,13 +987,15 @@
 <div class="coffee-overlay" id="coffeeOverlay">
   <div class="coffee-popup">
     <svg class="popup-cup-svg" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M14 26h44l-5 32H19L14 26z" fill="#f0c080" stroke="#a0632f" stroke-width="2.5" stroke-linejoin="round"/>
-      <path d="M49 31h8a5 5 0 0 1 0 10h-8" stroke="#a0632f" stroke-width="2.5" stroke-linecap="round"/>
-      <path d="M26 14c0-3 3-4.5 3-9" stroke="#c47c3a" stroke-width="2.5" stroke-linecap="round"/>
-      <path d="M36 12c0-3 3-4.5 3-9" stroke="#c47c3a" stroke-width="2.5" stroke-linecap="round"/>
-      <ellipse cx="36" cy="62" rx="14" ry="2.5" fill="#a0632f" opacity="0.18"/>
+      <g id="popupCupSvgPaths">
+        <path d="M14 26h44l-5 32H19L14 26z" fill="#f0c080" stroke="#a0632f" stroke-width="2.5" stroke-linejoin="round"/>
+        <path d="M49 31h8a5 5 0 0 1 0 10h-8" stroke="#a0632f" stroke-width="2.5" stroke-linecap="round"/>
+        <path d="M26 14c0-3 3-4.5 3-9" stroke="#c47c3a" stroke-width="2.5" stroke-linecap="round"/>
+        <path d="M36 12c0-3 3-4.5 3-9" stroke="#c47c3a" stroke-width="2.5" stroke-linecap="round"/>
+        <ellipse cx="36" cy="62" rx="14" ry="2.5" fill="#a0632f" opacity="0.18"/>
+      </g>
     </svg>
-    <div class="popup-title">Coffee <em>earned!</em></div>
+    <div class="popup-title"><span id="popupTitleText">Coffee</span> <em>earned!</em></div>
     <div class="popup-sub" id="popupSub">You've completed a pomodoro.<br>Time to reward yourself.</div>
     <div class="popup-total" id="popupTotal">☕ × 1 today</div>
     <button class="popup-close" onclick="closeCoffeePopup()">Let's keep going</button>
@@ -964,7 +1028,18 @@ const COFFEE_MSGS = [
   'A well-earned cup. Savour it.',
 ];
 
+const GREEN_TEA_MSGS = [
+  'Still water runs deep. So does your focus.',
+  'Another session steeped in intention.',
+  'Your mind was quiet. Your work was not.',
+  'Patience brews wisdom — and progress.',
+  'That was calm, clear work. Well done.',
+  'The leaves know. Keep going.',
+  'A mindful session, a mindful cup.',
+];
+
 let mode = 'focus';
+let currentTheme = localStorage.getItem('ff_theme') || 'coffee';
 let totalSecs = 25*60, remaining = totalSecs;
 let running = false, ticker = null;
 let tasks = JSON.parse(localStorage.getItem('ff_tasks')||'[]');
@@ -1181,8 +1256,28 @@ function playChime() {
 }
 
 function showCoffeePopup(total) {
-  document.getElementById('popupSub').textContent=COFFEE_MSGS[Math.floor(Math.random()*COFFEE_MSGS.length)];
-  document.getElementById('popupTotal').textContent='☕ × '+total+' today';
+  const isGreen = currentTheme === 'greentea';
+  const icon = getThemeIcon();
+  document.getElementById('popupSub').textContent = isGreen
+    ? GREEN_TEA_MSGS[Math.floor(Math.random()*GREEN_TEA_MSGS.length)]
+    : COFFEE_MSGS[Math.floor(Math.random()*COFFEE_MSGS.length)];
+  document.getElementById('popupTotal').textContent = icon + ' × ' + total + ' today';
+  document.getElementById('popupTitleText').textContent = isGreen ? 'Tea' : 'Coffee';
+
+  // Swap SVG cup color
+  const cupFill   = isGreen ? '#b8d4b0' : '#f0c080';
+  const cupStroke = isGreen ? '#3d6b4f' : '#a0632f';
+  const steamCol  = isGreen ? '#4e8264' : '#c47c3a';
+  const popupSvg = document.getElementById('popupCupSvgPaths');
+  if (popupSvg) {
+    popupSvg.innerHTML = `
+      <path d="M14 26h44l-5 32H19L14 26z" fill="${cupFill}" stroke="${cupStroke}" stroke-width="2.5" stroke-linejoin="round"/>
+      <path d="M49 31h8a5 5 0 0 1 0 10h-8" stroke="${cupStroke}" stroke-width="2.5" stroke-linecap="round"/>
+      <path d="M26 14c0-3 3-4.5 3-9" stroke="${steamCol}" stroke-width="2.5" stroke-linecap="round"/>
+      <path d="M36 12c0-3 3-4.5 3-9" stroke="${steamCol}" stroke-width="2.5" stroke-linecap="round"/>
+      <ellipse cx="36" cy="62" rx="14" ry="2.5" fill="${cupStroke}" opacity="0.18"/>`;
+  }
+
   document.getElementById('coffeeOverlay').classList.add('show');
 }
 
@@ -1255,7 +1350,7 @@ function renderTasks() {
         <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round"><polyline points="1.5,5 4,7.5 8.5,2.5"/></svg>
       </div>
       <div class="task-name">${esc(t.name)}</div>
-      <div class="task-pomos${!t.pomos?' zero':''}">☕ ${t.pomos||0}</div>
+      <div class="task-pomos${!t.pomos?' zero':''}">${getThemeIcon()} ${t.pomos||0}</div>
       <button class="task-delete" onclick="event.stopPropagation();deleteTask(${t.id})">✕</button>
     </div>`).join('');
 }
@@ -1277,7 +1372,8 @@ function renderDailyGoal() {
   const pct = Math.min(100, Math.round((cups / goal) * 100));
   const streak = getCoffeeStreak();
   const remainingGoal = Math.max(0, goal - cups);
-  document.getElementById('goalMeta').textContent = `${cups} / ${goal} ☕`;
+  const icon = getThemeIcon();
+  document.getElementById('goalMeta').textContent = `${cups} / ${goal} ${icon}`;
   document.getElementById('goalBar').style.width = pct + '%';
   document.getElementById('streakLabel').textContent = `${streak} day${streak === 1 ? '' : 's'} streak`;
   document.getElementById('goalHint').textContent = remainingGoal === 0
@@ -1305,9 +1401,11 @@ function getCoffeeStreak() {
 function renderCoffee() {
   const cups=coffeeData.days[today]||0;
   const pomos=insights[today].pomos||0;
+  const isGreen = currentTheme === 'greentea';
+  const icon = getThemeIcon();
   document.getElementById('coffeeTotal').textContent=cups;
   document.getElementById('coffeeAllTime').textContent=coffeeData.allTime||0;
-  const nextMenuItem = MENU_ITEMS.find(m => (coffeeData.allTime||0) < m.req);
+  const nextMenuItem = getActiveMenuItems().find(m => (coffeeData.allTime||0) < m.req);
   const nextStatEl = document.getElementById('coffeeNext');
   const nextLblEl = document.getElementById('coffeeNextLbl');
   if (nextMenuItem) {
@@ -1318,7 +1416,13 @@ function renderCoffee() {
     if (nextLblEl) nextLblEl.textContent = 'full menu unlocked!';
   }
 
-  const msgs=[
+  const msgs = isGreen ? [
+    'Complete your first pomodoro to earn a tea!',
+    'First cup steeped. Keep going!',
+    `${cups} cups brewed today. You're in the flow.`,
+    `${cups} cups! A beautifully focused day.`,
+    `${cups} cups today. You might be a tea master.`,
+  ] : [
     'Complete your first pomodoro to earn a coffee!',
     'First cup down. Keep going!',
     `${cups} cups strong today. You're on a roll.`,
@@ -1327,17 +1431,24 @@ function renderCoffee() {
   ];
   document.getElementById('coffeeMsg').textContent=cups===0?msgs[0]:cups===1?msgs[1]:cups<4?msgs[2]:cups<7?msgs[3]:msgs[4];
 
-  const show = cups + 1; // earned + 1 upcoming empty
+  // Cup colors: coffee = warm brown/amber, tea = sage green
+  const cupFill   = isGreen ? '#b8d4b0' : '#f0c080';
+  const cupStroke = isGreen ? '#3d6b4f' : '#a0632f';
+  const steamCol  = isGreen ? '#4e8264' : '#c47c3a';
+  const emptyStroke = isGreen ? '#b0c8b0' : '#ccc';
+  const emptySteam  = isGreen ? '#c8ddc8' : '#ddd';
+
+  const show = cups + 1;
   const cupsRow=document.getElementById('coffeeCupsRow');
   cupsRow.innerHTML=Array.from({length:Math.min(show,12)},(_,i)=>{
     const filled=i<cups;
     const isNew=filled&&i===cups-1;
     return `<div class="coffee-cup-big ${filled?'filled':'empty'}${isNew?' pop':''}">
       <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M6 11h20l-2.5 15H8.5L6 11z" fill="${filled?'#f0c080':'none'}" stroke="${filled?'#a0632f':'#ccc'}" stroke-width="1.5" stroke-linejoin="round"/>
-        <path d="M22 13.5h4a2.5 2.5 0 0 1 0 5h-4" stroke="${filled?'#a0632f':'#ccc'}" stroke-width="1.5" stroke-linecap="round"/>
-        <path d="M11 6c0-1.5 1.5-2 1.5-4" stroke="${filled?'#c47c3a':'#ddd'}" stroke-width="1.2" stroke-linecap="round"/>
-        <path d="M16 5c0-1.5 1.5-2 1.5-4" stroke="${filled?'#c47c3a':'#ddd'}" stroke-width="1.2" stroke-linecap="round"/>
+        <path d="M6 11h20l-2.5 15H8.5L6 11z" fill="${filled?cupFill:'none'}" stroke="${filled?cupStroke:emptyStroke}" stroke-width="1.5" stroke-linejoin="round"/>
+        <path d="M22 13.5h4a2.5 2.5 0 0 1 0 5h-4" stroke="${filled?cupStroke:emptyStroke}" stroke-width="1.5" stroke-linecap="round"/>
+        <path d="M11 6c0-1.5 1.5-2 1.5-4" stroke="${filled?steamCol:emptySteam}" stroke-width="1.2" stroke-linecap="round"/>
+        <path d="M16 5c0-1.5 1.5-2 1.5-4" stroke="${filled?steamCol:emptySteam}" stroke-width="1.2" stroke-linecap="round"/>
       </svg>
       <div class="cup-num">${i+1}</div>
     </div>`;
@@ -1346,10 +1457,10 @@ function renderCoffee() {
   const hCups=Math.min(cups,6);
   document.getElementById('headerCups').innerHTML=Array.from({length:hCups},(_,i)=>`
     <svg class="cup-icon${i===cups-1?' pop':''}" viewBox="0 0 16 16" fill="none">
-      <path d="M2 5h12l-1.5 8H3.5L2 5z" fill="#f0c080" stroke="#a0632f" stroke-width="1.2" stroke-linejoin="round"/>
-      <path d="M11 6.5h2.5a1.5 1.5 0 0 1 0 3H11" stroke="#a0632f" stroke-width="1.2" stroke-linecap="round"/>
+      <path d="M2 5h12l-1.5 8H3.5L2 5z" fill="${cupFill}" stroke="${cupStroke}" stroke-width="1.2" stroke-linejoin="round"/>
+      <path d="M11 6.5h2.5a1.5 1.5 0 0 1 0 3H11" stroke="${cupStroke}" stroke-width="1.2" stroke-linecap="round"/>
     </svg>`).join('');
-  document.getElementById('headerCoffeeLabel').textContent=cups+' ☕';
+  document.getElementById('headerCoffeeLabel').textContent=cups+' '+icon;
 }
 
 function renderHourlyBars() {
@@ -1374,7 +1485,7 @@ function renderBreakdown() {
     <div class="breakdown-row">
       <div class="breakdown-name">${esc(t.name)}</div>
       <div class="breakdown-bar-bg"><div class="breakdown-bar-fill" style="width:${Math.round((t.pomos/maxP)*100)}%"></div></div>
-      <div class="breakdown-count">☕ ${t.pomos}</div>
+      <div class="breakdown-count">${getThemeIcon()} ${t.pomos}</div>
     </div>`).join('');
 }
 
@@ -1420,7 +1531,7 @@ function renderLog() {
     return `
       <div class="log-group${isOpen ? ' open' : ''}">
         <button class="log-group-header" type="button" aria-expanded="${isOpen}" aria-controls="${detailId}" onclick="toggleLogGroupByIndex(${index})">
-          <div class="log-group-icon">☕</div>
+          <div class="log-group-icon">${getThemeIcon()}</div>
           <div class="log-group-name">${esc(taskName)}</div>
           <div class="log-group-meta">
             <div class="log-group-count">${entries.length} session${entries.length > 1 ? 's' : ''}</div>
@@ -1479,35 +1590,129 @@ const MENU_ITEMS = [
   },
 ];
 
+const GREEN_TEA_MENU_ITEMS = [
+  {
+    id: 'sencha', name: 'Sencha', icon: '🍵',
+    req: 1,
+    desc: 'Steamed and rolled. The everyday tea of clarity and calm.',
+    flavour: '"A fresh start. Light and clear."',
+    roast: 'Fresh & clean',
+  },
+  {
+    id: 'gyokuro', name: 'Gyokuro', icon: '🌿',
+    req: 5,
+    desc: 'Shade-grown for weeks. Deep, sweet, and full of patience.',
+    flavour: '"Shade-grown, slow-brewed. Like your best ideas."',
+    roast: 'Deep & contemplative',
+  },
+  {
+    id: 'matcha', name: 'Matcha', icon: '🍃',
+    req: 12,
+    desc: 'Stone-ground whole leaves. Thick with intention and focus.',
+    flavour: '"Stone-ground patience. Thick with intention."',
+    roast: 'Ceremonial & grounded',
+  },
+  {
+    id: 'hojicha', name: 'Hojicha', icon: '🌾',
+    req: 20,
+    desc: 'Roasted over charcoal. Warm, calm, unhurried.',
+    flavour: '"Roasted calm. The afternoon that finally clicked."',
+    roast: 'Warm & roasted',
+  },
+  {
+    id: 'genmaicha', name: 'Genmaicha', icon: '🌱',
+    req: 35,
+    desc: 'Tea with toasted rice. Simple, honest, and complete.',
+    flavour: '"Rice and leaf, simple and complete. So are you."',
+    roast: 'Earthy & balanced',
+  },
+  {
+    id: 'ceremonial', name: 'Ceremonial Blend', icon: '✨',
+    req: 50,
+    desc: 'Your own ceremony. Built from stillness, breath, and time.',
+    flavour: '"You didn\'t just sit down to focus. You made it a ceremony."',
+    roast: 'Legendary & yours',
+  },
+];
+
+function getActiveMenuItems() {
+  return currentTheme === 'greentea' ? GREEN_TEA_MENU_ITEMS : MENU_ITEMS;
+}
+
+function getThemeIcon() {
+  return currentTheme === 'greentea' ? '🍵' : '☕';
+}
+
+function toggleTheme() {
+  currentTheme = currentTheme === 'greentea' ? 'coffee' : 'greentea';
+  localStorage.setItem('ff_theme', currentTheme);
+  applyTheme();
+  renderAll();
+  renderMenu();
+  renderCoffee();
+  showToast(currentTheme === 'greentea' ? '🍵 Green Tea theme — breathe and focus' : '☕ Coffee theme — let\'s get to work');
+}
+
+function applyTheme() {
+  const isGreen = currentTheme === 'greentea';
+  document.documentElement.setAttribute('data-theme', isGreen ? 'greentea' : '');
+
+  // Button shows CURRENT theme
+  const iconEl = document.getElementById('themeToggleIcon');
+  const labelEl = document.getElementById('themeToggleLabel');
+  const hoverEl = document.getElementById('themeToggleHover');
+  if (iconEl) iconEl.textContent = isGreen ? '🍵' : '☕';
+  if (labelEl) labelEl.textContent = isGreen ? 'Green Tea' : 'Coffee';
+  if (hoverEl) hoverEl.textContent = isGreen ? 'Switch to Coffee' : 'Switch to Green Tea';
+
+  // Update coffee card title
+  const coffeeCardTitle = document.querySelector('.coffee-card-title');
+  if (coffeeCardTitle) coffeeCardTitle.textContent = isGreen ? 'Tea earned today 🍵' : 'Coffee earned today ☕';
+
+  // Update header bar colors
+  const coffeeBar = document.querySelector('.coffee-bar');
+  if (coffeeBar) {
+    coffeeBar.style.background = isGreen ? 'var(--accent-dim)' : '';
+    coffeeBar.style.borderColor = isGreen ? 'var(--accent-glow)' : '';
+  }
+
+  // Update unlock close button text
+  const unlockCloseBtn = document.getElementById('unlockCloseBtn');
+  if (unlockCloseBtn) unlockCloseBtn.textContent = isGreen ? 'Nice, keep steeping 🍵' : 'Nice, keep brewing ☕';
+}
+
+
 function getUnlockedMenuItems() {
   const total = coffeeData.allTime || 0;
-  return MENU_ITEMS.filter(m => total >= m.req);
+  return getActiveMenuItems().filter(m => total >= m.req);
 }
 
 function renderMenu() {
+  const items = getActiveMenuItems();
+  const icon = getThemeIcon();
   const total = coffeeData.allTime || 0;
-  const unlocked = MENU_ITEMS.filter(m => total >= m.req);
-  const nextItem = MENU_ITEMS.find(m => total < m.req);
-  const maxReq = MENU_ITEMS[MENU_ITEMS.length - 1].req;
+  const unlocked = items.filter(m => total >= m.req);
+  const nextItem = items.find(m => total < m.req);
+  const maxReq = items[items.length - 1].req;
 
-  document.getElementById('menuUnlockedCount').textContent = `${unlocked.length}/${MENU_ITEMS.length}`;
+  document.getElementById('menuUnlockedCount').textContent = `${unlocked.length}/${items.length}`;
 
   const pct = Math.min(100, Math.round((total / maxReq) * 100));
   document.getElementById('menuProgressBar').style.width = pct + '%';
 
-  document.getElementById('menuItems').innerHTML = MENU_ITEMS.map(item => {
+  document.getElementById('menuItems').innerHTML = items.map(item => {
     const isUnlocked = total >= item.req;
     return `
       <div class="menu-item ${isUnlocked ? 'unlocked' : 'locked'}">
         <div class="menu-item-icon">${item.icon}</div>
         <div class="menu-item-info">
           <div class="menu-item-name">${item.name}</div>
-          <div class="menu-item-desc">${isUnlocked ? item.roast : `Unlock at ${item.req} ☕ all-time`}</div>
+          <div class="menu-item-desc">${isUnlocked ? item.roast : `Unlock at ${item.req} ${icon} all-time`}</div>
         </div>
         <div class="menu-item-right">
           ${isUnlocked
-            ? `<div class="menu-badge-unlocked">✓ unlocked</div><div class="menu-item-xp">at ${item.req} ☕</div>`
-            : `<div class="menu-badge-locked">${item.req - total} more ☕</div>`}
+            ? `<div class="menu-badge-unlocked">✓ unlocked</div><div class="menu-item-xp">at ${item.req} ${icon}</div>`
+            : `<div class="menu-badge-locked">${item.req - total} more ${icon}</div>`}
         </div>
       </div>`;
   }).join('');
@@ -1515,7 +1720,7 @@ function renderMenu() {
   if (nextItem) {
     const need = nextItem.req - total;
     document.getElementById('menuNextHint').textContent =
-      `${need} more cup${need > 1 ? 's' : ''} to unlock ${nextItem.name} ${nextItem.icon}`;
+      `${need} more ${need > 1 ? 'cups' : 'cup'} to unlock ${nextItem.name} ${nextItem.icon}`;
   } else {
     document.getElementById('menuNextHint').textContent = '✨ Full menu unlocked. You are a legend.';
   }
@@ -1523,7 +1728,7 @@ function renderMenu() {
 
 function checkMenuUnlock(prevTotal) {
   const newTotal = coffeeData.allTime || 0;
-  const newlyUnlocked = MENU_ITEMS.find(m => m.req > prevTotal && newTotal >= m.req);
+  const newlyUnlocked = getActiveMenuItems().find(m => m.req > prevTotal && newTotal >= m.req);
   if (newlyUnlocked) {
     setTimeout(() => showUnlockPopup(newlyUnlocked), 2200);
   }
@@ -1605,6 +1810,7 @@ function updateHeaderDate() {
 
 applySettings();
 renderSettings();
+applyTheme();
 updateHeaderDate(); setInterval(updateHeaderDate,60000);
 updateTimerDisplay(); renderAll();
 </script>
